@@ -1,1 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Surface Atom Fraction — Gold Nanostructures</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0B2545;--card:#132E54;--deep:#0D2D4F;--line:#1A3A60;--blue:#1B5FAD;--white:#EEF5FB;--mute:#7AAFD4;--dim:#4A6B8A;--gold:#F0C040;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*,*::before,*::after{box-sizing:inherit;margin:0;padding:0}
+html,body{min-height:100%;background:var(--navy);color:var(--white);font-family:'Inter',system-ui,sans-serif}
+#app{display:grid;gap:14px;padding:16px;max-width:1120px;margin:0 auto;grid-template-columns:minmax(0,1fr) 330px;
+  grid-template-areas:"head head" "chart readout" "controls diagram" "notes notes"}
+header{grid-area:head}
+h1{font-size:19px;font-weight:700}
+header p{margin-top:4px;font-size:12.5px;color:var(--mute);line-height:1.5}
+.card{background:var(--card);border-radius:12px;padding:14px}
+.lab{font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--dim);margin-bottom:8px}
+#cChart{grid-area:chart}#cRead{grid-area:readout}#cCtrl{grid-area:controls}#cDiag{grid-area:diagram}#cNotes{grid-area:notes}
+#chart{display:block;width:100%;height:auto;touch-action:pan-y;cursor:crosshair;user-select:none}
+.grid{stroke:#1A3A60;stroke-width:1}.minor{opacity:.4}
+.tick{fill:#7AAFD4;font-size:11px}.axt{fill:#4A6B8A;font-size:11px}.note-t{fill:#7AAFD4;font-size:10.5px}
+.presets{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;align-items:center;font-size:11px;color:var(--dim)}
+button{font:inherit;font-size:12px;font-weight:500;color:var(--mute);background:transparent;border:1px solid var(--line);border-radius:7px;padding:5px 10px;cursor:pointer;transition:background .15s,color .15s}
+button:hover{background:#1B4A80;color:#fff}
+button.on{background:var(--blue);border-color:var(--blue);color:#fff}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.ctl{margin-bottom:14px}.ctl:last-child{margin-bottom:0}
+.ctl .top{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:var(--mute);margin-bottom:6px}
+.ctl .top b{color:var(--white);font-size:14px}
+input[type=range]{width:100%;accent-color:var(--gold);cursor:pointer}
+#big{font-size:46px;font-weight:700;color:var(--gold);line-height:1}
+#bigsub{font-size:12px;color:var(--mute);margin:4px 0 12px}
+.row{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:5px 0;border-bottom:1px solid var(--line);font-size:12px}
+.row:last-child{border-bottom:0}.row span:first-child{color:var(--dim)}.row span:last-child{font-weight:500;text-align:right}
+#diag{display:block;width:100%;max-width:300px;height:auto;margin:0 auto}
+#diagCap{font-size:11px;color:var(--dim);text-align:center;margin-top:8px;line-height:1.5}
+.key{display:flex;justify-content:center;gap:14px;margin-top:8px;font-size:11px;color:var(--mute)}
+.key i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+#cNotes{font-size:12px;line-height:1.7;color:var(--mute)}
+#cNotes b{color:var(--white)}
+code{background:var(--deep);padding:1px 6px;border-radius:5px;color:var(--white)}
+@media(max-width:820px){#app{grid-template-columns:minmax(0,1fr);grid-template-areas:"head" "chart" "readout" "controls" "diagram" "notes"}}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>Surface atom fraction in gold nanostructures</h1>
+    <p>A surface atom is any atom within <i>n</i> atomic layers of the surface (default 4). Drag on the chart, or use the sliders, to see how the fraction changes with size.</p>
+  </header>
 
+  <section class="card" id="cChart">
+    <svg id="chart" viewBox="0 0 640 380" role="img" aria-label="Fraction of surface atoms versus size on a logarithmic axis"></svg>
+    <div class="presets" id="presets"><span>Jump to:</span></div>
+  </section>
+
+  <section class="card" id="cRead">
+    <div class="lab">at the selected size</div>
+    <div id="big"></div><div id="bigsub">of the atoms are surface atoms</div>
+    <div id="rows"></div>
+  </section>
+
+  <section class="card" id="cCtrl">
+    <div class="lab">controls</div>
+    <div class="ctl"><div class="top"><span>Shape</span></div><div class="seg" id="shapeSeg">
+      <button data-v="sphere" class="on">Sphere</button><button data-v="cube">Cube</button><button data-v="wire">Nanowire</button><button data-v="film">Thin film</button></div></div>
+    <div class="ctl"><div class="top"><span id="dimLab">Diameter</span><b id="sizeVal"></b></div>
+      <input type="range" id="sizeRange" min="0" max="1000" step="1" aria-label="Size"></div>
+    <div class="ctl"><div class="top"><span>Surface depth (atomic layers)</span><b id="layerVal"></b></div>
+      <input type="range" id="layerRange" min="1" max="10" step="1" value="4" aria-label="Surface depth in atomic layers"></div>
+    <div class="ctl"><div class="top"><span>Layer spacing</span></div><div class="seg" id="facetSeg">
+      <button data-v="111" class="on">(111) · 0.235 nm</button><button data-v="100">(100) · 0.204 nm</button></div></div>
+  </section>
+
+  <section class="card" id="cDiag">
+    <div class="lab">central cross-section</div>
+    <svg id="diag" viewBox="0 0 260 260" role="img" aria-label="Cross-section with surface atoms highlighted"></svg>
+    <div class="key"><span><i style="background:#F0C040"></i>surface atoms</span><span><i style="background:#3C6EB0"></i>core atoms</span></div>
+    <div id="diagCap"></div>
+  </section>
+
+  <section class="card" id="cNotes">
+    <div class="lab">model</div>
+    <b>Surface fraction:</b> <code>f = 1 − (1 − 2t / D)<sup>p</sup></code> with shell depth <code>t = n × d</code> (n layers, d = layer spacing).
+    The exponent <code>p</code> is the number of dimensions that shrink: <b>3</b> for a sphere or cube, <b>2</b> for a long nanowire, <b>1</b> for a thin film (two faces).
+    A sphere of diameter D and a cube of edge D have the same surface-to-volume ratio (6/D), so they follow the <b>same curve</b>.
+    When D ≤ 2t there is no core left: every atom is a surface atom.<br>
+    <b>Gold:</b> FCC, a = 0.4078 nm → 58.97 atoms/nm³, d<sub>111</sub> = a/√3 = 0.2355 nm, d<sub>100</sub> = a/2 = 0.2039 nm, atomic radius 0.144 nm.
+    Atom counts use the continuum volume; the cross-section places real gold atoms on a (100) plane (atoms drawn only up to 10 nm).
+    Real nanoparticles also have edges, corners and facet-dependent coordination, which this simple model ignores.
+  </section>
+</div>
+
+<script>
+'use strict';
+// ============================================================================
+// 1. MODEL — pure functions (tested offline)
+// ============================================================================
+// <logic>
+const A=.40782;                          // Au lattice parameter, nm
+const RHO=4/A**3;                        // atoms per nm³ (FCC: 4 per cell)
+const RATOM=A*Math.SQRT2/4;              // atomic radius, nm
+const SPACING={111:A/Math.sqrt(3),100:A/2};
+const SHAPES={                           // p = number of shrinking dimensions; vol(s) in nm³ (per nm length / per nm² for wire / film)
+  sphere:{label:'Sphere',dim:'Diameter',p:3,vol:s=>Math.PI*s**3/6,unit:''},
+  cube:{label:'Cube',dim:'Edge length',p:3,vol:s=>s**3,unit:''},
+  wire:{label:'Nanowire',dim:'Diameter',p:2,vol:s=>Math.PI*s*s/4,unit:' per nm of length'},
+  film:{label:'Thin film',dim:'Thickness',p:1,vol:s=>s,unit:' per nm² of area'}
+};
+const clampSize=(s,min=1)=>Math.min(1000,Math.max(min, Number(s)||min));
+const coreFrac=(s,t,p)=>{
+  const size = Math.max(Number(s)||0, 1e-9);
+  const shell = Math.max(0, 1 - 2*t/size);
+  return shell ** p;
+};
+const surfFrac=(s,t,p)=>1-coreFrac(s,t,p);
+const crossover=(t,p,f=.5)=>2*t/(1-(1-f)**(1/p));      // size at which the surface fraction reaches f
+function atomsAt(shape,s,t){
+  const size = Math.max(Number(s)||0, 1e-9);
+  const N=RHO*SHAPES[shape].vol(size),f=surfFrac(size,t,SHAPES[shape].p);
+  return{total:N,surface:N*f,core:N*(1-f),f};
+}
+function boundaryDistance(shape,x,y){
+  const ax=Math.abs(x), ay=Math.abs(y);
+  switch(shape){
+    case 'cube': return Math.max(ax,ay);
+    case 'film': return ay;
+    case 'wire':
+    case 'sphere':
+    default: return Math.hypot(x,y);
+  }
+}
+// Atoms of a (100) plane through the particle centre; depth = distance to the nearest surface (nm).
+// Atom centres sit at least half a layer (d/2) inside the boundary, so n layers have depths d/2 … (n-½)d.
+function slice(shape,s,d){
+  const safeSize=Math.max(Number(s)||0,1e-9);
+  const h=A/2,n=Math.ceil(safeSize/2/h)+1,lim=safeSize/2-d/2+1e-9,out=[];
+  for(let i=-n;i<=n;i++)for(let j=-n;j<=n;j++){
+    if((i+j)&1)continue;                                  // FCC (100) plane: atoms where i+j is even
+    const x=i*h,y=j*h;
+    const m=boundaryDistance(shape,x,y);
+    if(m>lim)continue;
+    out.push({x,y,depth:safeSize/2-m});
+  }
+  return out;
+}
+const fmtSize=s=>{const v=Math.max(Number(s)||0,0); return v>=1000?`${+(v/1000).toFixed(2)} µm`:v>=100?`${Math.round(v)} nm`:v>=10?`${+v.toFixed(1)} nm`:`${+v.toFixed(2)} nm`;};
+function fmtCount(n){
+  if(n<1e5)return Math.round(n).toLocaleString('en-US');
+  const e=Math.floor(Math.log10(n));
+  return `${(n/10**e).toFixed(2)} × 10<sup>${e}</sup>`;
+}
+// </logic>
+
+// ============================================================================
+// 2. UI
+// ============================================================================
+const $=id=>document.getElementById(id);
+const GOLD='#F0C040',CORE='#3C6EB0';
+const CURVES=[{p:3,label:'Sphere / cube',color:'#F0C040'},{p:2,label:'Nanowire',color:'#2DD4DF'},{p:1,label:'Thin film',color:'#A78BFA'}];
+const PRESETS=[1,2,5,10,20,100,1000],ATOM_VIEW_MAX=10;
+let shape='sphere',size=5,layers=4,facet='111';
+const shell=()=>layers*SPACING[facet];
+
+// --- chart -------------------------------------------------------------------
+const W=640,H=380,ML=54,MR=16,MT=14,MB=46,PW=W-ML-MR,PH=H-MT-MB;
+const X=s=>ML+Math.log10(Math.max(Number(s)||1,1))/3*PW;
+const Y=f=>MT+(1-f)*PH;
+const curvePath=(p,t)=>[...Array(241)].map((_,i)=>{const s=clampSize(10**(3*i/240));return`${i?'L':'M'}${X(s).toFixed(1)} ${Y(surfFrac(s,t,p)).toFixed(1)}`;}).join('');
+
+function renderChart(){
+  const safeSize = clampSize(size,1);
+  const t=shell(),p=SHAPES[shape].p,f=surfFrac(safeSize,t,p),cx=X(safeSize),cy=Y(f);
+  let g='';
+  for(let v=0;v<=100;v+=20)g+=`<line class="grid" x1="${ML}" x2="${W-MR}" y1="${Y(v/100)}" y2="${Y(v/100)}"/><text class="tick" x="${ML-8}" y="${Y(v/100)+4}" text-anchor="end">${v}%</text>`;
+  for(let e=0;e<3;e++)for(let m=1;m<10;m++){const s=clampSize(m*10**e);g+=`<line class="grid${m>1?' minor':''}" x1="${X(s)}" x2="${X(s)}" y1="${MT}" y2="${MT+PH}"/>`;}
+  g+=`<line class="grid" x1="${X(1000)}" x2="${X(1000)}" y1="${MT}" y2="${MT+PH}"/>`;
+  [1,10,100,1000].forEach(s=>{g+=`<text class="tick" x="${X(s)}" y="${MT+PH+16}" text-anchor="middle">${s===1000?'1 µm':s+' nm'}</text>`;});
+  g+=`<text class="axt" x="${ML+PW/2}" y="${H-6}" text-anchor="middle">${SHAPES[shape].dim.toLowerCase()} (log scale)</text>`;
+  g+=`<text class="axt" transform="translate(13 ${MT+PH/2}) rotate(-90)" text-anchor="middle">surface atoms (%)</text>`;
+  if(2*t>1){                                                       // no-core zone
+    const x2=X(Math.min(2*t,1000));
+    g+=`<rect x="${ML}" y="${MT}" width="${x2-ML}" height="${PH}" fill="${GOLD}" opacity=".09"/>`;
+    g+=`<text class="note-t" x="${ML+5}" y="${MT+PH-8}">no core: all surface</text>`;
+  }
+  const order=[...CURVES].sort((a,b)=>(a.p===p)-(b.p===p));      // selected curve drawn last (on top)
+  for(const c of order){const sel=c.p===p;g+=`<path d="${curvePath(c.p,t)}" fill="none" stroke="${c.color}" stroke-width="${sel?3.5:1.8}" opacity="${sel?1:.5}" stroke-linejoin="round"/>`;}
+  CURVES.forEach((c,i)=>{const y=MT+16+i*16,x=W-MR-128;g+=`<line x1="${x}" x2="${x+18}" y1="${y}" y2="${y}" stroke="${c.color}" stroke-width="3" opacity="${c.p===p?1:.55}"/><text class="tick" x="${x+24}" y="${y+4}">${c.label}</text>`;});
+  const s50=crossover(t,p);
+  if(s50>=1&&s50<=1000)g+=`<circle cx="${X(s50)}" cy="${Y(.5)}" r="4.5" fill="#0B2545" stroke="#fff" stroke-width="1.5"/><text class="note-t" x="${X(s50)+8}" y="${Y(.5)-8}">50% at ${fmtSize(s50)}</text>`;
+  g+=`<line x1="${cx}" x2="${cx}" y1="${cy}" y2="${MT+PH}" stroke="#fff" stroke-dasharray="4 4" opacity=".6"/><line x1="${ML}" x2="${cx}" y1="${cy}" y2="${cy}" stroke="#fff" stroke-dasharray="4 4" opacity=".6"/>`;
+  const label=`${fmtSize(safeSize)} → ${(f*100).toFixed(f<.01?2:1)}%`,lw=label.length*6.6+14,right=cx>W-lw-30,lx=right?cx-lw-10:cx+10,ly=Math.max(MT+4,Math.min(cy-34,MT+PH-26));
+  g+=`<circle cx="${cx}" cy="${cy}" r="6" fill="#fff" stroke="${CURVES.find(c=>c.p===p).color}" stroke-width="3"/>`;
+  g+=`<rect x="${lx}" y="${ly}" width="${lw}" height="22" rx="6" fill="#0B2545" stroke="#1A3A60"/><text x="${lx+7}" y="${ly+15}" fill="#EEF5FB" font-size="12" font-weight="600">${label}</text>`;
+  $('chart').innerHTML=g;
+}
+
+// --- readout -----------------------------------------------------------------
+function renderReadout(){
+  const safeSize = clampSize(size,1);
+  const t=shell(),sh=SHAPES[shape],r=atomsAt(shape,safeSize,t),s50=crossover(t,sh.p);
+  $('big').textContent=`${(r.f*100).toFixed(r.f<.01?2:1)}%`;
+  const row=(a,b)=>`<div class="row"><span>${a}</span><span>${b}</span></div>`;
+  $('rows').innerHTML=[
+    row(sh.dim,fmtSize(safeSize)),
+    row('Shell depth t',`${layers} × ${(+SPACING[facet].toFixed(4))} = ${(+t.toFixed(3))} nm`),
+    row(`Total atoms${sh.unit}`,fmtCount(r.total)),
+    row(`Surface atoms${sh.unit}`,fmtCount(r.surface)),
+    row(`Core atoms${sh.unit}`,fmtCount(r.core)),
+    row('50% surface at',fmtSize(s50)),
+    row('Core vanishes below',fmtSize(2*t))
+  ].join('');
+  $('sizeVal').textContent=fmtSize(safeSize);$('layerVal').textContent=layers;$('dimLab').textContent=sh.dim;
+}
+
+// --- cross-section diagram ---------------------------------------------------
+function renderDiagram(){
+  const safeSize = clampSize(size,1);
+  const t=shell(),d=SPACING[facet],B=230,C=130,k=B/safeSize,round=shape==='sphere'||shape==='wire';
+  const outline=round?`<circle cx="${C}" cy="${C}" r="${B/2}"`:`<rect x="${C-B/2}" y="${C-B/2}" width="${B}" height="${B}"`;
+  let body,cap;
+  if(safeSize<=ATOM_VIEW_MAX){
+    const R=(RATOM*k).toFixed(2);
+    body=slice(shape,safeSize,d).map(a=>{
+      const surf=a.depth<=t+1e-9,L=Math.min(layers-1,Math.floor(a.depth/d));
+      return`<circle cx="${(C+a.x*k).toFixed(1)}" cy="${(C-a.y*k).toFixed(1)}" r="${R}" fill="${surf?`hsl(45 90% ${Math.max(36,74-L*6)}%)`:CORE}"/>`;
+    }).join('');
+    cap=`Gold atoms drawn to scale. Darker gold = deeper layer (${layers} layers = ${(+t.toFixed(2))} nm).`+(shape==='film'?' Only the top and bottom faces are surfaces.':'');
+  }else{
+    const w=Math.max(t*k,2.5),inner=Math.max(0,B-2*w);
+    const shellShape=round?`${outline} fill="${GOLD}"/><circle cx="${C}" cy="${C}" r="${Math.max(0,inner/2)}" fill="${CORE}"/>`
+      :shape==='cube'?`${outline} fill="${GOLD}"/><rect x="${C-inner/2}" y="${C-inner/2}" width="${inner}" height="${inner}" fill="${CORE}"/>`
+      :`${outline} fill="${GOLD}"/><rect x="${C-B/2}" y="${C-B/2+w}" width="${B}" height="${inner}" fill="${CORE}"/>`;
+    body=shellShape;
+    cap=`Continuum view, too large to show atoms.${t*k<2.5?' Shell drawn thicker than true scale.':''}`;
+  }
+  $('diag').innerHTML=`${outline} fill="#0B2545" stroke="#4A6B8A" stroke-dasharray="5 4"/>${body}`;
+  $('diagCap').textContent=cap;
+}
+
+function render(){renderChart();renderReadout();renderDiagram();}
+function setSize(s){size=clampSize(s,1);$('sizeRange').value=Math.log10(size)/3*1000;render();}
+
+// --- wiring ------------------------------------------------------------------
+function segment(id,onPick){
+  const seg=$(id);
+  seg.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
+    seg.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));onPick(b.dataset.v);render();}));
+}
+segment('shapeSeg',v=>{shape=v;});
+segment('facetSeg',v=>{facet=v;});
+$('sizeRange').addEventListener('input',e=>{size=10**(e.target.value*3/1000);render();});
+$('layerRange').addEventListener('input',e=>{layers=+e.target.value;render();});
+PRESETS.forEach(s=>{const b=document.createElement('button');b.textContent=fmtSize(s);b.addEventListener('click',()=>setSize(s));$('presets').appendChild(b);});
+
+const svg=$('chart');
+let dragging=false;
+function fromPointer(e){
+  const r=svg.getBoundingClientRect();
+  if(!r.width)return;
+  const x=(e.clientX-r.left)/r.width*W;
+  setSize(10**(Math.min(1,Math.max(0,(x-ML)/PW))*3));
+}
+svg.addEventListener('pointerdown',e=>{dragging=true;svg.setPointerCapture(e.pointerId);fromPointer(e);});
+svg.addEventListener('pointermove',e=>{if(dragging)fromPointer(e);});
+['pointerup','pointercancel'].forEach(ev=>svg.addEventListener(ev,()=>{dragging=false;}));
+
+setSize(size);
+</script>
+</body>
+</html>
